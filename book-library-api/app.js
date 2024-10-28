@@ -1,55 +1,32 @@
-const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
+const express = require('express');
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const bookRoutes = require('./routes/books');
+
+dotenv.config();
+
 const app = express();
 
-app.use(bodyParser.json());
-app.use(cors());
+// Allow requests from localhost:3000 only
+app.use(cors({ origin: 'http://localhost:3000', optionsSuccessStatus: 200 }));
 
-// In-memory book storage
-let books = [
-    { id: 1, title: "The Great Gatsby", author: "F. Scott Fitzgerald", genre: "Fiction", publishedYear: 1925 },
-];
+app.use(express.json());
 
-// GET all books
-app.get('/books', (req, res) => {
-    res.json(books);
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+}).then(() => {
+  console.log('Connected to MongoDB');
+}).catch((error) => {
+  console.error('Error connecting to MongoDB:', error);
 });
 
-// GET a single book by ID
-app.get('/books/:id', (req, res) => {
-    const book = books.find(b => b.id === parseInt(req.params.id));
-    book ? res.json(book) : res.status(404).json({ message: "Book not found" });
-});
+// Set up routes
+app.use('/books', bookRoutes);
 
-// POST a new book
-app.post('/books', (req, res) => {
-    const newBook = { id: books.length + 1, ...req.body };
-    books.push(newBook);
-    res.status(201).json(newBook);
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
-
-// PUT update a book by ID
-app.put('/books/:id', (req, res) => {
-    const bookIndex = books.findIndex(b => b.id === parseInt(req.params.id));
-    if (bookIndex !== -1) {
-        books[bookIndex] = { ...books[bookIndex], ...req.body };
-        res.json(books[bookIndex]);
-    } else {
-        res.status(404).json({ message: "Book not found" });
-    }
-});
-
-// DELETE a book by ID
-app.delete('/books/:id', (req, res) => {
-    const bookIndex = books.findIndex(b => b.id === parseInt(req.params.id));
-    if (bookIndex !== -1) {
-        books.splice(bookIndex, 1);
-        res.json({ message: "Book deleted" });
-    } else {
-        res.status(404).json({ message: "Book not found" });
-    }
-});
-
-// Start server
-app.listen(3001, () => console.log('Server running on http://localhost:3001'));
